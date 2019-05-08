@@ -125,12 +125,15 @@ HRESULT BCAPService::Connect()
   ros::Duration(m_wait).sleep();
 
   ss1 << m_type << ":" << m_addr << ":" << m_port;
+  std::cout << ss1.str() << std::endl;
   hr = bCap_Open_Client(ss1.str().c_str(), m_timeout, m_retry, &m_fd);
-  if(SUCCEEDED(hr)) {
+  std::cout << "bCap_OpenClient completed with hr: " << hr << std::endl;
+  if (SUCCEEDED(hr)) {
     ss2 << L",WDT=" << m_wdt << L",InvokeTimeout=" << m_invoke;
     BSTR bstrOption = SysAllocString(ss2.str().c_str());
     hr = bCap_ServiceStart(m_fd, bstrOption);
     SysFreeString(bstrOption);
+    std::cout << "bCap_ServiceStart completed with hr:" << hr << std::endl;
   }
 
   return hr;

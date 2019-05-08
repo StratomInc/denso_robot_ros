@@ -598,6 +598,7 @@ HRESULT
 bCap_ServiceStart(int fd, BSTR bstrOption)
 {
   char format[] = "8";
+  printf("YES ITS TYRING TO START SERVICE HERE!\n");
   return invoke_function(fd, ID_SERVICE_START, 1, format, bstrOption);
 }
 

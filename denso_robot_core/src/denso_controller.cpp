@@ -27,11 +27,14 @@
 namespace denso_robot_core {
 
 DensoController::DensoController(const std::string& name, const int* mode)
-  : DensoBase(name, mode)
-{
+    : DensoBase(name, mode) {
+  // RMD - I do not know why they are trying to start two services, one udp and
+  // one tcp, going to manually create one tcp service
+  /*
   for(int srvs = DensoBase::SRV_MIN; srvs <= DensoBase::SRV_MAX; srvs++) {
     BCAPService_Ptr service = boost::make_shared<bcap_service::BCAPService>();
     service->parseParams();
+
     switch(srvs){
       case DensoBase::SRV_ACT:
         service->put_Type("udp");
@@ -41,75 +44,73 @@ DensoController::DensoController(const std::string& name, const int* mode)
         break;
     }
     m_vecService.push_back(service);
-  }
+ }*/
+
+  // RMD - new code
+  BCAPService_Ptr service = boost::make_shared<bcap_service::BCAPService>();
+  service->parseParams();
+  m_vecService.push_back(service);
 }
 
-DensoController::~DensoController()
-{
+DensoController::~DensoController() {}
 
-}
+HRESULT DensoController::InitializeBCAP(const std::string& filename) {
+  HRESULT hr;
+  XMLError ret;
+  XMLDocument xmlDoc;
+  XMLElement *xmlCtrl, *xmlRob, *xmlTsk;
 
-HRESULT DensoController::InitializeBCAP(const std::string& filename)
-{
-  HRESULT      hr;
-  XMLError     ret;
-  XMLDocument  xmlDoc;
-  XMLElement  *xmlCtrl, *xmlRob, *xmlTsk;
-
-  for(int srvs = DensoBase::SRV_MIN; srvs <= DensoBase::SRV_MAX; srvs++) {
+  std::cout << "Trying to Init BCAP" << std::endl;
+  for (int srvs = DensoBase::SRV_MIN; srvs <= DensoBase::SRV_MAX; srvs++) {
     hr = m_vecService[srvs]->Connect();
-    if(FAILED(hr)) return hr;
+    if (FAILED(hr)) return hr;
   }
-
+  std::cout << "Successfully Connected!" << std::endl;
   ret = xmlDoc.LoadFile(filename.c_str());
-  if(ret != XML_SUCCESS) return E_FAIL;
+  if (ret != XML_SUCCESS) return E_FAIL;
 
   hr = AddController();
-  if(FAILED(hr)) return hr;
+  if (FAILED(hr)) return hr;
 
   xmlCtrl = xmlDoc.FirstChildElement(XML_CTRL_NAME);
-  if(xmlCtrl == NULL) return E_FAIL;
+  if (xmlCtrl == NULL) return E_FAIL;
+
+  std::cout << "Trying to add XML variable: " << std::endl;
 
   hr = AddVariable(xmlCtrl);
-  if(FAILED(hr)) return hr;
+  std::cout << "Added XML Variable with return code: " << hr << std::endl;
+  if (FAILED(hr)) return hr;
 
   xmlRob = xmlCtrl->FirstChildElement(XML_ROBOT_NAME);
-  if(xmlRob == NULL) return E_FAIL;
+  if (xmlRob == NULL) return E_FAIL;
 
   hr = AddRobot(xmlRob);
-  if(FAILED(hr)) return hr;
+  if (FAILED(hr)) return hr;
+  std::cout << "Added Robot with return code: " << hr << std::endl;
 
   xmlTsk = xmlCtrl->FirstChildElement(XML_TASK_NAME);
-  if(xmlTsk == NULL) return E_FAIL;
+  if (xmlTsk == NULL) return E_FAIL;
 
+  std::cout << "Adding Task" << std::endl;
   hr = AddTask(xmlTsk);
+  std::cout << "Added Task with return code: " << hr << std::endl;
 
   return hr;
 }
 
-HRESULT DensoController::StartService(ros::NodeHandle& node)
-{
+HRESULT DensoController::StartService(ros::NodeHandle& node) {
   DensoRobot_Vec::iterator itRob;
-  for(itRob  = m_vecRobot.begin();
-      itRob != m_vecRobot.end();
-      itRob++)
-  {
+  for (itRob = m_vecRobot.begin(); itRob != m_vecRobot.end(); itRob++) {
     (*itRob)->StartService(node);
   }
 
   DensoTask_Vec::iterator itTsk;
-  for(itTsk  = m_vecTask.begin();
-      itTsk != m_vecTask.end();
-      itTsk++)
-  {
+  for (itTsk = m_vecTask.begin(); itTsk != m_vecTask.end(); itTsk++) {
     (*itTsk)->StartService(node);
   }
 
   DensoVariable_Vec::iterator itVar;
-  for(itVar  = m_vecVar.begin();
-      itVar != m_vecVar.end();
-      itVar++)
-  {
+  for (itVar = m_vecVar.begin(); itVar != m_vecVar.end(); itVar++) {
     (*itVar)->StartService(node);
   }
 
@@ -118,74 +119,53 @@ HRESULT DensoController::StartService(ros::NodeHandle& node)
   return S_OK;
 }
 
-HRESULT DensoController::StopService()
-{
+HRESULT DensoController::StopService() {
   m_mtxSrv.lock();
   m_serving = false;
   m_mtxSrv.unlock();
 
   DensoRobot_Vec::iterator itRob;
-  for(itRob  = m_vecRobot.begin();
-      itRob != m_vecRobot.end();
-      itRob++)
-  {
+  for (itRob = m_vecRobot.begin(); itRob != m_vecRobot.end(); itRob++) {
     (*itRob)->StopService();
   }
 
   DensoTask_Vec::iterator itTsk;
-  for(itTsk  = m_vecTask.begin();
-      itTsk != m_vecTask.end();
-      itTsk++)
-  {
+  for (itTsk = m_vecTask.begin(); itTsk != m_vecTask.end(); itTsk++) {
     (*itTsk)->StopService();
   }
 
   DensoVariable_Vec::iterator itVar;
-  for(itVar  = m_vecVar.begin();
-      itVar != m_vecVar.end();
-      itVar++)
-  {
+  for (itVar = m_vecVar.begin(); itVar != m_vecVar.end(); itVar++) {
     (*itVar)->StopService();
   }
 
   return S_OK;
 }
 
-bool DensoController::Update()
-{
+bool DensoController::Update() {
   boost::mutex::scoped_lock lockSrv(m_mtxSrv);
-  if(!m_serving) return false;
+  if (!m_serving) return false;
 
   DensoRobot_Vec::iterator itRob;
-  for(itRob  = m_vecRobot.begin();
-      itRob != m_vecRobot.end();
-      itRob++)
-  {
+  for (itRob = m_vecRobot.begin(); itRob != m_vecRobot.end(); itRob++) {
     (*itRob)->Update();
   }
 
   DensoTask_Vec::iterator itTsk;
-  for(itTsk  = m_vecTask.begin();
-      itTsk != m_vecTask.end();
-      itTsk++)
-  {
+  for (itTsk = m_vecTask.begin(); itTsk != m_vecTask.end(); itTsk++) {
     (*itTsk)->Update();
   }
 
   DensoVariable_Vec::iterator itVar;
-  for(itVar  = m_vecVar.begin();
-      itVar != m_vecVar.end();
-      itVar++)
-  {
+  for (itVar = m_vecVar.begin(); itVar != m_vecVar.end(); itVar++) {
     (*itVar)->Update();
   }
 
   return true;
 }
 
-HRESULT DensoController::get_Robot(int index, DensoRobot_Ptr* robot)
-{
-  if(robot == NULL) {
+HRESULT DensoController::get_Robot(int index, DensoRobot_Ptr* robot) {
+  if (robot == NULL) {
     return E_INVALIDARG;
   }
 
@@ -194,16 +174,16 @@ HRESULT DensoController::get_Robot(int index, DensoRobot_Ptr* robot)
 
   DensoBase_Ptr pBase;
   HRESULT hr = DensoBase::get_Object(vecBase, index, &pBase);
-  if(SUCCEEDED(hr)) {
+  if (SUCCEEDED(hr)) {
     *robot = boost::dynamic_pointer_cast<DensoRobot>(pBase);
   }
 
   return hr;
 }
 
-HRESULT DensoController::get_Task(const std::string& name, DensoTask_Ptr* task)
-{
-  if(task == NULL) {
+HRESULT DensoController::get_Task(const std::string& name,
+                                  DensoTask_Ptr* task) {
+  if (task == NULL) {
     return E_INVALIDARG;
   }
 
@@ -212,16 +192,16 @@ HRESULT DensoController::get_Task(const std::string& name, DensoTask_Ptr* task)
 
   DensoBase_Ptr pBase;
   HRESULT hr = DensoBase::get_Object(vecBase, name, &pBase);
-  if(SUCCEEDED(hr)) {
+  if (SUCCEEDED(hr)) {
     *task = boost::dynamic_pointer_cast<DensoTask>(pBase);
   }
 
   return hr;
 }
 
-HRESULT DensoController::get_Variable(const std::string& name, DensoVariable_Ptr* var)
-{
-  if(var == NULL) {
+HRESULT DensoController::get_Variable(const std::string& name,
+                                      DensoVariable_Ptr* var) {
+  if (var == NULL) {
     return E_INVALIDARG;
   }
 
@@ -230,32 +210,33 @@ HRESULT DensoController::get_Variable(const std::string& name, DensoVariable_Ptr
 
   DensoBase_Ptr pBase;
   HRESULT hr = DensoBase::get_Object(vecBase, name, &pBase);
-  if(SUCCEEDED(hr)) {
+  if (SUCCEEDED(hr)) {
     *var = boost::dynamic_pointer_cast<DensoVariable>(pBase);
   }
 
   return hr;
 }
 
-HRESULT DensoController::AddTask(XMLElement *xmlElem)
-{
+HRESULT DensoController::AddTask(XMLElement* xmlElem) {
   int objs;
   HRESULT hr;
 
-  Name_Vec   vecName;
-  hr = DensoBase::GetObjectNames(ID_CONTROLLER_GETTASKNAMES, vecName);
-  if(SUCCEEDED(hr)) {
-    for(objs = 0; objs < vecName.size(); objs++) {
+  Name_Vec vecName;
+  // hr = DensoBase::GetObjectNames(ID_CONTROLLER_GETTASKNAMES, vecName);
+  vecName.push_back("ROBSLAVE");
+  if (SUCCEEDED(hr)) {
+    for (objs = 0; objs < vecName.size(); objs++) {
       Handle_Vec vecHandle;
-      hr = DensoBase::AddObject(
-          ID_CONTROLLER_GETTASK, vecName[objs], vecHandle);
-      if(FAILED(hr)) break;
+      hr = DensoBase::AddObject(ID_CONTROLLER_GETTASK, vecName[objs], vecHandle);
+      std::cout << "Getting Task handle with return: " << hr << std::endl;
+      if (FAILED(hr)) break;
 
-      DensoTask_Ptr tsk(new DensoTask(this,
-          m_vecService, vecHandle, vecName[objs], m_mode));
+      DensoTask_Ptr tsk(
+          new DensoTask(this, m_vecService, vecHandle, vecName[objs], m_mode));
 
       hr = tsk->InitializeBCAP(xmlElem);
-      if(FAILED(hr)) break;
+      
+      if (FAILED(hr)) break;
 
       m_vecTask.push_back(tsk);
     }
@@ -264,27 +245,24 @@ HRESULT DensoController::AddTask(XMLElement *xmlElem)
   return hr;
 }
 
-HRESULT DensoController::AddVariable(const std::string& name)
-{
-  return DensoBase::AddVariable(ID_CONTROLLER_GETVARIABLE,
-      name, m_vecVar);
+HRESULT DensoController::AddVariable(const std::string& name) {
+  return DensoBase::AddVariable(ID_CONTROLLER_GETVARIABLE, name, m_vecVar);
 }
 
-HRESULT DensoController::AddVariable(XMLElement *xmlElem)
-{
+HRESULT DensoController::AddVariable(XMLElement* xmlElem) {
   HRESULT hr = S_OK;
-  XMLElement *xmlVar;
+  XMLElement* xmlVar;
 
-  for(xmlVar = xmlElem->FirstChildElement(XML_VARIABLE_NAME);
-      xmlVar!= NULL;
-      xmlVar = xmlVar->NextSiblingElement(XML_VARIABLE_NAME)) {
-
-      hr = DensoBase::AddVariable(ID_CONTROLLER_GETVARIABLE,
-          xmlVar, m_vecVar);
-      if(FAILED(hr)) break;
+  for (xmlVar = xmlElem->FirstChildElement(XML_VARIABLE_NAME); xmlVar != NULL;
+       xmlVar = xmlVar->NextSiblingElement(XML_VARIABLE_NAME)) {
+    hr = DensoBase::AddVariable(ID_CONTROLLER_GETVARIABLE, xmlVar, m_vecVar);
+    XMLPrinter printer;
+    xmlVar->Accept(&printer);
+    std::cout << printer.CStr() << std::endl;
+    if (FAILED(hr)) break;
   }
 
   return hr;
 }
 
-}
+}  // namespace denso_robot_core

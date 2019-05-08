@@ -70,12 +70,15 @@ typedef std::vector<BCAPService_Ptr> Service_Vec;
 class DensoBase
 {
 public:
-  enum {
-    SRV_MIN = 0,
-    SRV_ACT = SRV_MIN,
-    SRV_WATCH,
-    SRV_MAX = SRV_WATCH
-  };
+ enum {
+   SRV_MIN = 0,
+   SRV_ACT = SRV_MIN,
+   // RMD - Setting all SRV to 0, since I only want to lanuch the one service to
+   // prevent UDP from connecting.
+   // SRV_WATCH,
+   SRV_WATCH = 0,
+   SRV_MAX = SRV_WATCH
+ };
 
 public:
   static std::string ConvertBSTRToString(const BSTR bstr);

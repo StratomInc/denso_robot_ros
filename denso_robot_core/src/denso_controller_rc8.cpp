@@ -29,25 +29,18 @@
 namespace denso_robot_core {
 
 DensoControllerRC8::DensoControllerRC8(const std::string& name, const int* mode)
-  : DensoController(name, mode)
-{
+    : DensoController(name, mode) {}
 
-}
+DensoControllerRC8::~DensoControllerRC8() {}
 
-DensoControllerRC8::~DensoControllerRC8()
-{
-
-}
-
-HRESULT DensoControllerRC8::AddController()
-{
-  static const std::string CTRL_CONNECT_OPTION[BCAP_CTRL_CONNECT_ARGS] = 
-    {"", "CaoProv.DENSO.VRC", "localhost", ""};
+HRESULT DensoControllerRC8::AddController() {
+  static const std::string CTRL_CONNECT_OPTION[BCAP_CTRL_CONNECT_ARGS] = {
+      "", "CaoProv.DENSO.VRC", "localhost", ""};
 
   HRESULT hr = E_FAIL;
   int srvs, argc;
 
-  for(srvs = DensoBase::SRV_MIN; srvs <= DensoBase::SRV_MAX; srvs++) {
+  for (srvs = DensoBase::SRV_MIN; srvs <= DensoBase::SRV_MAX; srvs++) {
     std::stringstream ss;
     std::string strTmp;
     VARIANT_Ptr vntRet(new VARIANT());
@@ -55,15 +48,15 @@ HRESULT DensoControllerRC8::AddController()
 
     VariantInit(vntRet.get());
 
-    for(argc = 0; argc < BCAP_CTRL_CONNECT_ARGS; argc++) {
+    for (argc = 0; argc < BCAP_CTRL_CONNECT_ARGS; argc++) {
       VARIANT_Ptr vntTmp(new VARIANT());
       VariantInit(vntTmp.get());
 
       vntTmp->vt = VT_BSTR;
 
-      if(argc == 0) {
+      if (argc == 0) {
         strTmp = "";
-        if(m_name != "") {
+        if (m_name != "") {
           ss << ros::this_node::getNamespace() << m_name << srvs;
           strTmp = ss.str();
         }
@@ -76,23 +69,26 @@ HRESULT DensoControllerRC8::AddController()
       vntArgs.push_back(*vntTmp.get());
     }
 
-    hr = m_vecService[srvs]->ExecFunction(ID_CONTROLLER_CONNECT, vntArgs, vntRet);
-    if(FAILED(hr)) break;
+    hr = m_vecService[srvs]->ExecFunction(ID_CONTROLLER_CONNECT, vntArgs,
+                                          vntRet);
+    if (FAILED(hr)) break;
 
     m_vecHandle.push_back(vntRet->ulVal);
+    std::cout << "Added Controller with Handle: " << vntRet->ulVal << std::endl;
   }
 
   return hr;
 }
 
-HRESULT DensoControllerRC8::AddRobot(XMLElement *xmlElem)
-{
+HRESULT DensoControllerRC8::AddRobot(XMLElement* xmlElem) {
   int objs;
   HRESULT hr;
 
+  /*
   Name_Vec   vecName;
   hr = DensoBase::GetObjectNames(ID_CONTROLLER_GETROBOTNAMES, vecName);
-  if(SUCCEEDED(hr)) {
+  std::cout << "Get robot names returned " << hr << std::endl;
+  if (SUCCEEDED(hr)) {
     for(objs = 0; objs < vecName.size(); objs++) {
       Handle_Vec vecHandle;
       hr = DensoBase::AddObject(
@@ -106,9 +102,21 @@ HRESULT DensoControllerRC8::AddRobot(XMLElement *xmlElem)
 
       m_vecRobot.push_back(rob);
     }
-  }
+  }*/
+  
+    Handle_Vec vecHandle;
+    hr = DensoBase::AddObject(ID_CONTROLLER_GETROBOT, "rob1", vecHandle);
+    if (FAILED(hr)) return hr;
+
+    DensoRobot_Ptr rob(
+        new DensoRobotRC8(this, m_vecService, vecHandle, "rob1", m_mode));
+    hr = rob->InitializeBCAP(xmlElem);
+    if (FAILED(hr)) return hr;
+
+    m_vecRobot.push_back(rob);
+ 
 
   return hr;
 }
 
-}
+}  // namespace denso_robot_core

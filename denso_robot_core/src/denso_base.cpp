@@ -136,7 +136,8 @@ HRESULT DensoBase::AddVariable(int32_t get_id,
 
   Handle_Vec vecHandle;
   HRESULT hr = AddObject(get_id, name, vecHandle);
-  if(FAILED(hr)) return hr;
+  std::cout << "Adding Variable " << name << " with return: " << hr << std::endl;
+  if (FAILED(hr)) return hr;
 
   DensoVariable_Ptr var(new DensoVariable(this,
       m_vecService, vecHandle, name, m_mode,

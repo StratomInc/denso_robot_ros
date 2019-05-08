@@ -17,11 +17,12 @@
   <Task>
     <!-- Task status -->
     <Variable vt="3" read="true" write="false" duration="10000">@STATUS</Variable>
-    <!-- Start and stop -->
-    <Variable vt="3" read="false" write="true">@START</Variable>
-    <Variable vt="3" read="false" write="true">@STOP</Variable>
+    <!-- Start and stop --> <!--RMD THESE ARE NOT RC7 Variables-->
+    <!--Variable vt="3" read="false" write="true">@START</Variable>
+    <Variable vt="3" read="false" write="true">@STOP</Variable-->
   </Task>
   <!-- Global variables -->
+  <!-- With RC7 you cannot read variables with a *, Commenting out for now since we do not need them, I dont think
   <Variable vt="3"    read="true" write="true" id="true" duration="10000">I*</Variable>
   <Variable vt="4"    read="true" write="true" id="true" duration="10000">F*</Variable>
   <Variable vt="5"    read="true" write="true" id="true" duration="10000">D*</Variable>
@@ -31,9 +32,10 @@
   <Variable vt="8196" read="true" write="true" id="true" duration="10000">P*</Variable>
   <Variable vt="8196" read="true" write="true" id="true" duration="10000">J*</Variable>
   <Variable vt="8196" read="true" write="true" id="true" duration="10000">T*</Variable>
+  -->
   <!-- System variables -->
   <Variable vt="3"  read="true" write="false" duration="1000">@MODE</Variable>
-  <Variable vt="11" read="true" write="true"  duration="1000">@LOCK</Variable>
+  <!--Variable vt="11" read="true" write="true"  duration="1000">@LOCK</Variable-->
   <Variable vt="3"  read="true" write="true"  duration="1000">@ERROR_CODE</Variable>
   <Variable vt="11" read="true" write="false" duration="1000">@EMERGENCY_STOP</Variable>
 </Controller>

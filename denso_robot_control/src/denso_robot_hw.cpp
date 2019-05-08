@@ -56,6 +56,9 @@ namespace denso_robot_control
     m_recvfmt   = DensoRobotRC8::RECVFMT_POSE_PJ
       | DensoRobotRC8::RECVFMT_MINIIO
       | DensoRobotRC8::RECVFMT_HANDIO;
+
+    std::cout << "Send format: " << m_sendfmt
+              << "  Receive Format: " << m_recvfmt << std::endl;
   }
 
   DensoRobotHW::~DensoRobotHW()
@@ -290,6 +293,9 @@ namespace denso_robot_control
 
   HRESULT DensoRobotHW::CheckRobotType()
   {
+    // This function is for ROB 3.0, so not available to us, assume we are good, and dont check
+    HRESULT hr;
+    /*
     DensoVariable_Ptr pVar;
     VARIANT_Ptr vntVal(new VARIANT());
     std::string strTypeName = "@TYPE_NAME";
@@ -307,7 +313,8 @@ namespace denso_robot_control
           hr = E_FAIL;
         }
       }
-    }
+    }*/
+    ROS_WARN("Ignoring Robot Type Check, not available on ROM < V3");
 
     return hr;
   }
